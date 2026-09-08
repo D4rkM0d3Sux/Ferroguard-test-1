@@ -1,0 +1,6 @@
+{
+  "name": "ESP8266 Metal Detection Conveyor",
+  "description": "School baggage security inspection conveyor powered by ESP8266, LJ12A3 inductive metal sensor, and L298N motor driver with live telemetry, auto-halt interlock, and security screening statistics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

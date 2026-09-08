@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "CheckpointStation": {
+      "title": "Checkpoint Station",
+      "description": "Registered security checkpoint or screening station account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 100 },
+        "stationType": { "type": "string", "maxLength": 32 },
+        "operatorName": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "number" },
+        "operatorUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name", "stationType", "operatorName", "updatedAt", "operatorUid"]
+    },
+    "ScreeningEvent": {
+      "title": "Screening Event",
+      "description": "Log of baggage items screened with metal alerts and auto-halt actions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "number" },
+        "signalStrength": { "type": "number" },
+        "threshold": { "type": "number" },
+        "conveyorSpeedPwm": { "type": "number" },
+        "rejected": { "type": "boolean" },
+        "materialClassification": { "type": "string", "maxLength": 200 },
+        "operatorUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "timestamp", "createdAt", "signalStrength", "threshold", "conveyorSpeedPwm", "rejected", "materialClassification", "operatorUid"]
+    },
+    "CheckpointStats": {
+      "title": "Checkpoint Stats",
+      "description": "Aggregated statistics for a security checkpoint station",
+      "type": "object",
+      "properties": {
+        "totalPassed": { "type": "number" },
+        "cleanPassed": { "type": "number" },
+        "metalDetected": { "type": "number" },
+        "currentBatch": { "type": "number" },
+        "batchTarget": { "type": "number" },
+        "itemsPerMin": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "operatorUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["totalPassed", "cleanPassed", "metalDetected", "currentBatch", "batchTarget", "itemsPerMin", "updatedAt", "operatorUid"]
+    },
+    "ConveyorState": {
+      "title": "Conveyor State",
+      "description": "Live conveyor motion and interlock status for a checkpoint station",
+      "type": "object",
+      "properties": {
+        "running": { "type": "boolean" },
+        "haltedByDetection": { "type": "boolean" },
+        "eStop": { "type": "boolean" },
+        "speedPwm": { "type": "number" },
+        "speedRpm": { "type": "number" },
+        "speedMps": { "type": "number" },
+        "direction": { "type": "string", "maxLength": 16 },
+        "autoStopOnMetal": { "type": "boolean" },
+        "isMetalDetected": { "type": "boolean" },
+        "currentSignal": { "type": "number" },
+        "action": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "number" },
+        "operatorUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["running", "haltedByDetection", "eStop", "speedPwm", "direction", "autoStopOnMetal", "isMetalDetected", "updatedAt", "operatorUid"]
+    }
+  },
+  "firestore": {
+    "/stations/{stationId}": {
+      "schema": "CheckpointStation",
+      "description": "Security checkpoint station metadata and operator profiles"
+    },
+    "/stations/{stationId}/conveyor_state/{stateId}": {
+      "schema": "ConveyorState",
+      "description": "Live conveyor motion, speed, and metal detection interlock status"
+    },
+    "/stations/{stationId}/screening_events/{eventId}": {
+      "schema": "ScreeningEvent",
+      "description": "Station-scoped baggage screening event logs"
+    },
+    "/stations/{stationId}/checkpoint_stats/{statsId}": {
+      "schema": "CheckpointStats",
+      "description": "Station-scoped screening metrics and counters"
+    },
+    "/screening_events/{eventId}": {
+      "schema": "ScreeningEvent",
+      "description": "Legacy screening event log path"
+    },
+    "/checkpoint_stats/{statsId}": {
+      "schema": "CheckpointStats",
+      "description": "Legacy checkpoint stats path"
+    }
+  }
+}

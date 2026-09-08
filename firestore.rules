@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all unknown collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidScreeningEvent(data) {
+      return data.keys().hasAll([
+        'id', 'timestamp', 'createdAt', 'signalStrength', 'threshold',
+        'conveyorSpeedPwm', 'rejected', 'materialClassification', 'operatorUid'
+      ]) &&
+      data.keys().size() == 9 &&
+      data.id is string && data.id.size() <= 128 &&
+      data.timestamp is string && data.timestamp.size() <= 64 &&
+      data.createdAt is number &&
+      data.signalStrength is number &&
+      data.threshold is number &&
+      data.conveyorSpeedPwm is number &&
+      data.rejected is bool &&
+      data.materialClassification is string && data.materialClassification.size() <= 200 &&
+      data.operatorUid is string && (request.auth == null || data.operatorUid == request.auth.uid);
+    }
+
+    function isValidCheckpointStats(data) {
+      return data.keys().hasAll([
+        'totalPassed', 'cleanPassed', 'metalDetected', 'currentBatch',
+        'batchTarget', 'itemsPerMin', 'updatedAt', 'operatorUid'
+      ]) &&
+      data.keys().size() == 8 &&
+      data.totalPassed is number && data.totalPassed >= 0 &&
+      data.cleanPassed is number && data.cleanPassed >= 0 &&
+      data.metalDetected is number && data.metalDetected >= 0 &&
+      data.currentBatch is number && data.currentBatch >= 0 &&
+      data.batchTarget is number && data.batchTarget >= 0 &&
+      data.itemsPerMin is number && data.itemsPerMin >= 0 &&
+      data.updatedAt is number &&
+      data.operatorUid is string && (request.auth == null || data.operatorUid == request.auth.uid);
+    }
+
+    function isValidStation(data) {
+      return data.keys().hasAll([
+        'id', 'name', 'stationType', 'operatorName', 'updatedAt', 'operatorUid'
+      ]) &&
+      data.keys().size() <= 8 &&
+      data.id is string && data.id.size() <= 64 &&
+      data.name is string && data.name.size() <= 100 &&
+      data.stationType is string && data.stationType.size() <= 32 &&
+      data.operatorName is string && data.operatorName.size() <= 100 &&
+      (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+      data.updatedAt is number &&
+      data.operatorUid is string && (request.auth == null || data.operatorUid == request.auth.uid);
+    }
+
+    function isValidConveyorState(data) {
+      return data.keys().hasAll([
+        'running', 'haltedByDetection', 'eStop', 'speedPwm', 'direction',
+        'autoStopOnMetal', 'isMetalDetected', 'updatedAt', 'operatorUid'
+      ]) &&
+      data.keys().size() <= 16 &&
+      data.running is bool &&
+      data.haltedByDetection is bool &&
+      data.eStop is bool &&
+      data.speedPwm is number &&
+      data.direction is string && data.direction.size() <= 16 &&
+      data.autoStopOnMetal is bool &&
+      data.isMetalDetected is bool &&
+      (!('speedRpm' in data) || data.speedRpm is number) &&
+      (!('speedMps' in data) || data.speedMps is number) &&
+      (!('currentSignal' in data) || data.currentSignal is number) &&
+      (!('action' in data) || (data.action is string && data.action.size() <= 64)) &&
+      data.updatedAt is number &&
+      data.operatorUid is string && (request.auth == null || data.operatorUid == request.auth.uid);
+    }
+
+    // Security Checkpoint Stations collection & subcollections
+    match /stations/{stationId} {
+      allow read: if true;
+      allow create: if isValidId(stationId) && isValidStation(incoming());
+      allow update: if isValidId(stationId) && isValidStation(incoming());
+      allow delete: if isValidId(stationId);
+
+      // Station-scoped live conveyor state
+      match /conveyor_state/{stateId} {
+        allow read: if true;
+        allow create: if isValidId(stateId) && isValidConveyorState(incoming());
+        allow update: if isValidId(stateId) && isValidConveyorState(incoming());
+        allow delete: if isValidId(stateId);
+      }
+
+      // Station-scoped baggage security screening event log
+      match /screening_events/{eventId} {
+        allow read: if true;
+        allow create: if isValidId(eventId) && isValidScreeningEvent(incoming());
+        allow update: if false; // Audit logs are immutable
+        allow delete: if isValidId(eventId);
+      }
+
+      // Station-scoped checkpoint aggregated statistics
+      match /checkpoint_stats/{statsId} {
+        allow read: if true;
+        allow create: if isValidId(statsId) && isValidCheckpointStats(incoming());
+        allow update: if isValidId(statsId) && isValidCheckpointStats(incoming());
+        allow delete: if isValidId(statsId);
+      }
+    }
+
+    // Baggage security metal detection events log (legacy/fallback)
+    match /screening_events/{eventId} {
+      allow read: if true;
+      allow create: if isValidId(eventId) && isValidScreeningEvent(incoming());
+      allow update: if false; // Audit logs are immutable
+      allow delete: if isValidId(eventId);
+    }
+
+    // Checkpoint aggregated statistics
+    match /checkpoint_stats/{statsId} {
+      allow read: if true;
+      allow create: if isValidId(statsId) && isValidCheckpointStats(incoming());
+      allow update: if isValidId(statsId) && isValidCheckpointStats(incoming());
+      allow delete: if isValidId(statsId);
+    }
+  }
+}
